@@ -21,17 +21,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact: linux-x64
+            artifact: movie_dupecheck-linux-x64
             exe_name: movie_dupecheck
           - os: windows-latest
-            artifact: windows-x64
+            artifact: movie_dupecheck-windows-x64
             exe_name: movie_dupecheck.exe
           - os: macos-latest
-            artifact: macos-x64
-            exe_name: movie_dupecheck
+            artifact: movie_dupecheck-macos-x64
+            exe_name: movie_dupecheck_intel
           - os: macos-14
-            artifact: macos-arm64
-            exe_name: movie_dupecheck
+            artifact: movie_dupecheck-macos-arm64
+            exe_name: movie_dupecheck_arm
 
     steps:
       - uses: actions/checkout@v4
@@ -67,15 +67,22 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release
+          merge-multiple: false
+
+      - name: Rename artifacts for release
+        run: |
+          ls -la release/
+          if [ -f "release/movie_dupecheck-intel" ]; then mv release/movie_dupecheck-intel release/movie_dupecheck; fi
+          if [ -f "release/movie_dupecheck-arm" ]; then mv release/movie_dupecheck-arm release/movie_dupecheck_arm; fi
+          ls -la release/
 
       - name: Get tag name
         id: tag
         run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Create Release Notes
-        id: release-notes
         run: |
-          cat > release_notes.md << 'EOF'
+          cat > release_notes.md << EOF
           ## Movie Dupecheck v${{ steps.tag.outputs.TAG_NAME }}
 
           A command-line tool that finds and removes duplicate movie folders across HD and UHD collections.
@@ -87,33 +94,19 @@ jobs:
           - Compares file sizes to keep the largest version
           - Dry-run mode to preview deletions before committing
           - Calculates total space that will be freed
-          - Handles various naming conventions
-
-          ### Requirements
-          - Python 3.6+ or use the pre-built executables
 
           ### Downloads
           Select the correct binary for your platform:
-          - **Linux**: movie_dupecheck-linux-x64
-          - **Windows**: movie_dupecheck-windows-x64.exe
+          - **Linux x64**: movie_dupecheck-linux-x64
+          - **Windows x64**: movie_dupecheck-windows-x64.exe
           - **macOS Intel**: movie_dupecheck-macos-x64
-          - **macOS Apple Silicon**: movie_dupecheck-macos-arm64
-
-          ### Usage
-          ```bash
-          # Basic scan with size comparison
-          movie_dupecheck --hd-file /path/to/HD/ --uhd-file /path/to/UHD/ --hd-path /path/to/HD/ --uhd-path /path/to/UHD/
-
-          # Dry run mode
-          movie_dupecheck --dry-run
-          ```
+          - **macOS ARM64**: movie_dupecheck-macos-arm64
           EOF
-          cat release_notes.md
 
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: release/**
+          files: release/**/*
           name: Movie Dupecheck v${{ steps.tag.outputs.TAG_NAME }}
           tag_name: ${{ steps.tag.outputs.TAG_NAME }}
           body_path: release_notes.md
@@ -121,8 +114,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verify Release
-        run: |
-          echo "Release created successfully"
-          gh release view ${{ steps.tag.outputs.TAG_NAME }} --repo ${{ github.repository }}
