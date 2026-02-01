@@ -1,0 +1,67 @@
+name: Build Executables
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: movie_dupecheck-linux-x64
+            exe_name: movie_dupecheck
+          - os: windows-latest
+            artifact: movie_dupecheck-windows-x64
+            exe_name: movie_dupecheck.exe
+          - os: macos-latest
+            artifact: movie_dupecheck-macos-x64
+            exe_name: movie_dupecheck
+          - os: macos-14
+            artifact: movie_dupecheck-macos-arm64
+            exe_name: movie_dupecheck
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --onefile --name ${{ matrix.exe_name }} --clean movie_dupecheck.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.exe_name }}
+          retention-days: 5
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/**
+          generate_release_notes: true
