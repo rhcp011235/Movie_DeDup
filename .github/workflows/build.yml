@@ -13,16 +13,16 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact: movie_dupecheck-linux-x64
+            artifact: linux-x64
             exe_name: movie_dupecheck
           - os: windows-latest
-            artifact: movie_dupecheck-windows-x64
+            artifact: windows-x64
             exe_name: movie_dupecheck.exe
           - os: macos-latest
-            artifact: movie_dupecheck-macos-x64
+            artifact: macos-x64
             exe_name: movie_dupecheck
           - os: macos-14
-            artifact: movie_dupecheck-macos-arm64
+            artifact: macos-arm64
             exe_name: movie_dupecheck
 
     steps:
@@ -60,8 +60,61 @@ jobs:
         with:
           path: release
 
-      - name: Create Release
+      - name: Get tag name
+        id: tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release Notes
+        id: release-notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## Movie Dupecheck v${{ steps.tag.outputs.TAG_NAME }}
+
+          A command-line tool that finds and removes duplicate movie folders across HD and UHD collections.
+
+          ### Features
+          - Detects duplicate movies within a single directory
+          - Finds movies that exist in both HD and UHD directories
+          - Groups movies by title + year for accurate matching
+          - Compares file sizes to keep the largest version
+          - Dry-run mode to preview deletions before committing
+          - Calculates total space that will be freed
+          - Handles various naming conventions
+
+          ### Requirements
+          - Python 3.6+ or use the pre-built executables
+
+          ### Downloads
+          Select the correct binary for your platform:
+          - **Linux**: movie_dupecheck-linux-x64
+          - **Windows**: movie_dupecheck-windows-x64.exe
+          - **macOS Intel**: movie_dupecheck-macos-x64
+          - **macOS Apple Silicon**: movie_dupecheck-macos-arm64
+
+          ### Usage
+          ```bash
+          # Basic scan with size comparison
+          movie_dupecheck --hd-file /path/to/HD/ --uhd-file /path/to/UHD/ --hd-path /path/to/HD/ --uhd-path /path/to/UHD/
+
+          # Dry run mode
+          movie_dupecheck --dry-run
+          ```
+          EOF
+          cat release_notes.md
+
+      - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
           files: release/**
-          generate_release_notes: true
+          name: Movie Dupecheck v${{ steps.tag.outputs.TAG_NAME }}
+          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Release
+        run: |
+          echo "Release created successfully"
+          gh release view ${{ steps.tag.outputs.TAG_NAME }} --repo ${{ github.repository }}
