@@ -45,3 +45,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Local data files (personal movie lists)
+HD
+UHD
+dups
