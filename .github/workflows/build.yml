@@ -3,12 +3,16 @@ name: Build Executables
 on:
   push:
     branches: [main]
-  release:
-    types: [created]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
   actions: read
+  attestations: read
+  checks: read
 
 jobs:
   build:
