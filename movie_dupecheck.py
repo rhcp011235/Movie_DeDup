@@ -104,12 +104,12 @@ def get_title_year(name):
     year = None
     title_end = len(name)
     
-    match = re.search(r'\((\d{4})\)', name)
+    match = re.search(r'\(\s*(\d{4})\s*\)', name)
     if match:
         year = match.group(1)
         title_end = match.start()
     else:
-        match = re.search(r'[\.\-\s](\d{4})[\.\s]', name)
+        match = re.search(r'[\.\-\s](\d{4})(?=[\.\-\s]|$)', name)
         if match:
             year = match.group(1)
             title_end = match.start()
@@ -139,15 +139,15 @@ def find_duplicates(movies, category):
 
 def find_cross_duplicates(hd_movies, uhd_movies):
     """Find movies that exist in both HD and UHD lists."""
-    hd_normalized = {}
+    hd_normalized = defaultdict(list)
     for m in hd_movies:
         core = get_core_name(m)
-        hd_normalized[core] = m
+        hd_normalized[core].append(m)
     
-    uhd_normalized = {}
+    uhd_normalized = defaultdict(list)
     for m in uhd_movies:
         core = get_core_name(m)
-        uhd_normalized[core] = m
+        uhd_normalized[core].append(m)
     
     common = set(hd_normalized.keys()) & set(uhd_normalized.keys())
     cross_dupes = {}
@@ -212,20 +212,32 @@ def print_cross_duplicates_with_sizes(cross_dupes, hd_path, uhd_path, interactiv
         return
     to_delete = []
     for i, (core, versions) in enumerate(sorted(cross_dupes.items()), 1):
-        hd_size = get_file_size(hd_path, versions['hd'])
-        uhd_size = get_file_size(uhd_path, versions['uhd'])
+        hd_list = versions['hd'] if isinstance(versions['hd'], list) else [versions['hd']]
+        uhd_list = versions['uhd'] if isinstance(versions['uhd'], list) else [versions['uhd']]
+        
+        hd_size = max(get_file_size(hd_path, m) for m in hd_list) if hd_list else 0
+        uhd_size = max(get_file_size(uhd_path, m) for m in uhd_list) if uhd_list else 0
+        
         keep = "UHD" if uhd_size > hd_size else "HD"
         delete = "HD" if keep == "UHD" else "UHD"
         title = core.split('(')[0].strip().title()
+        
         print(f"{i}. {title}")
         print(f"   Normalized ID: {core}")
-        print(f"   HD  > {format_size(hd_size):>12} | {versions['hd']}")
-        print(f"   UHD > {format_size(uhd_size):>12} | {versions['uhd']}")
+        print(f"   HD  > {format_size(hd_size):>12} | {hd_list[0]}")
+        for m in hd_list[1:]:
+            print(f"         {format_size(get_file_size(hd_path, m)):>12} | {m}")
+        print(f"   UHD > {format_size(uhd_size):>12} | {uhd_list[0]}")
+        for m in uhd_list[1:]:
+            print(f"         {format_size(get_file_size(uhd_path, m)):>12} | {m}")
         print(f"   >>> RECOMMEND: Delete {delete} version (keep {keep})")
+        
         if delete == "HD":
-            to_delete.append((hd_path, versions['hd']))
+            for m in hd_list:
+                to_delete.append((hd_path, m))
         else:
-            to_delete.append((uhd_path, versions['uhd']))
+            for m in uhd_list:
+                to_delete.append((uhd_path, m))
         print()
     return to_delete
 
@@ -321,18 +333,22 @@ def print_cross_duplicates_dry_run(cross_dupes, hd_path, uhd_path):
         title = core.split('(')[0].strip().title()
         print(f"{i}. {title}")
         print(f"   Normalized ID: {core}")
-        if hd_path:
-            hd_full = os.path.join(hd_path, versions['hd'])
-            hd_exists = "EXISTS" if os.path.exists(hd_full) else "NOT FOUND"
-        else:
-            hd_exists = ""
-        if uhd_path:
-            uhd_full = os.path.join(uhd_path, versions['uhd'])
-            uhd_exists = "EXISTS" if os.path.exists(uhd_full) else "NOT FOUND"
-        else:
-            uhd_exists = ""
-        print(f"   HD:  {versions['hd']} [{hd_exists}]")
-        print(f"   UHD: {versions['uhd']} [{uhd_exists}]")
+        hd_list = versions['hd'] if isinstance(versions['hd'], list) else [versions['hd']]
+        uhd_list = versions['uhd'] if isinstance(versions['uhd'], list) else [versions['uhd']]
+        for m in hd_list:
+            if hd_path:
+                hd_full = os.path.join(hd_path, m)
+                hd_exists = "EXISTS" if os.path.exists(hd_full) else "NOT FOUND"
+            else:
+                hd_exists = ""
+            print(f"   HD:  {m} [{hd_exists}]")
+        for m in uhd_list:
+            if uhd_path:
+                uhd_full = os.path.join(uhd_path, m)
+                uhd_exists = "EXISTS" if os.path.exists(uhd_full) else "NOT FOUND"
+            else:
+                uhd_exists = ""
+            print(f"   UHD: {m} [{uhd_exists}]")
         print(f"   >>> ACTION: Delete smaller version (keep larger)")
         print()
 
@@ -388,8 +404,12 @@ def main():
                 title = core.split('(')[0].strip().title()
                 print(f"{i}. {title}")
                 print(f"   Normalized ID: {core}")
-                print(f"   HD:  {versions['hd']}")
-                print(f"   UHD: {versions['uhd']}")
+                hd_list = versions['hd'] if isinstance(versions['hd'], list) else [versions['hd']]
+                uhd_list = versions['uhd'] if isinstance(versions['uhd'], list) else [versions['uhd']]
+                for m in hd_list:
+                    print(f"   HD:  {m}")
+                for m in uhd_list:
+                    print(f"   UHD: {m}")
                 print()
             if not args.hd_path or not args.uhd_path:
                 print("   (Run with --hd-path and --uhd-path to see file sizes)")
@@ -446,12 +466,30 @@ def main():
         if args.hd_path and args.uhd_path:
             to_delete_hd_dry = []
             to_delete_uhd_dry = []
+            
+            # Cross duplicates
+            for core, versions in cross_dupes.items():
+                hd_list = versions['hd'] if isinstance(versions['hd'], list) else [versions['hd']]
+                uhd_list = versions['uhd'] if isinstance(versions['uhd'], list) else [versions['uhd']]
+                hd_size = max(get_file_size(args.hd_path, m) for m in hd_list) if hd_list else 0
+                uhd_size = max(get_file_size(args.uhd_path, m) for m in uhd_list) if uhd_list else 0
+                if hd_size > uhd_size:
+                    for m in uhd_list:
+                        to_delete_uhd_dry.append((args.uhd_path, m))
+                else:
+                    for m in hd_list:
+                        to_delete_hd_dry.append((args.hd_path, m))
+            
+            # HD duplicates
             for core, movie_list in hd_dupes.items():
                 for movie in movie_list[1:]:
                     to_delete_hd_dry.append((args.hd_path, movie))
+            
+            # UHD duplicates
             for core, movie_list in uhd_dupes.items():
                 for movie in movie_list[1:]:
                     to_delete_uhd_dry.append((args.uhd_path, movie))
+            
             total_size = calculate_total_delete_size(to_delete_hd_dry, to_delete_uhd_dry)
             folder_count = len(to_delete_hd_dry) + len(to_delete_uhd_dry)
             if folder_count > 0:
