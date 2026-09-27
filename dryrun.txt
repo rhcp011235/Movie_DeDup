@@ -1,0 +1,56 @@
+mode: DRY RUN   rule: UHD is the keeper; HD copy goes when UHD's file is as good or better
+
+== movies with a file in BOTH libraries: 39
+  DELETE HD   18.0 GB WEBDL-2160p   | keep UHD   21.3 GB WEBDL-2160p   | Anniversary (2025)
+  DELETE HD    2.0 GB WEBDL-1080p   | keep UHD   77.8 GB Remux-2160p   | Backrooms (2026)
+  DELETE HD    9.5 GB WEBDL-2160p   | keep UHD    9.5 GB WEBDL-2160p   | Classified (2024)
+  DELETE HD   22.1 GB WEBDL-2160p   | keep UHD   76.0 GB Remux-2160p   | Crime 101 (2026)
+  DELETE HD    1.8 GB Bluray-1080p  | keep UHD   61.6 GB Remux-2160p   | Dangerous Animals (2025)
+  DELETE HD    3.4 GB WEBDL-1080p   | keep UHD   38.4 GB BR-DISK       | Decision to Leave (2022)
+  DELETE HD   22.1 GB WEBDL-2160p   | keep UHD   78.2 GB Remux-2160p   | Disclosure Day (2026)
+  DELETE HD    9.0 GB WEBDL-2160p   | keep UHD    9.0 GB WEBDL-2160p   | Fuze (2025)
+  DELETE HD    5.7 GB CAM           | keep UHD   78.3 GB Remux-2160p   | Gladiator II (2024)
+  DELETE HD    4.4 GB Bluray-1080p  | keep UHD   64.3 GB Remux-2160p   | Happy Death Day (2017)
+  DELETE HD   27.6 GB Remux-1080p   | keep UHD   21.6 GB WEBDL-2160p   | If I Had Legs I'd Kick You (2025)
+  DELETE HD    2.6 GB WEBRip-1080p  | keep UHD   20.9 GB WEBDL-2160p   | Mountainhead (2025)
+  DELETE HD    6.8 GB WEBDL-1080p   | keep UHD   10.6 GB WEBDL-2160p   | Mutiny (2026)
+  DELETE HD    7.4 GB WEBDL-1080p   | keep UHD   82.0 GB Remux-2160p   | No Other Choice (2025)
+  DELETE HD   10.7 GB WEBDL-2160p   | keep UHD   50.5 GB Remux-2160p   | Normal (2026)
+  DELETE HD    6.5 GB WEBDL-1080p   | keep UHD   20.2 GB WEBDL-2160p   | One Night Only (2026)
+  DELETE HD   19.9 GB WEBDL-2160p   | keep UHD   19.9 GB WEBDL-2160p   | Over Your Dead Body (2026)
+  DELETE HD   15.5 GB WEBDL-2160p   | keep UHD   15.5 GB WEBDL-2160p   | Passenger (2026)
+  DELETE HD    7.7 GB WEBDL-1080p   | keep UHD    7.7 GB WEBDL-1080p   | Ready or Not: Here I Come (2026)
+  DELETE HD    8.1 GB WEBDL-1080p   | keep UHD   15.3 GB WEBDL-2160p   | Red Right Hand (2024)
+  DELETE HD    7.5 GB WEBDL-1080p   | keep UHD   13.4 GB WEBDL-2160p   | Reminders of Him (2026)
+  DELETE HD   53.5 GB Remux-2160p   | keep UHD   53.1 GB Remux-2160p   | Send Help (2026)
+  DELETE HD   28.6 GB Remux-1080p   | keep UHD   91.6 GB Remux-2160p   | Sentimental Value (2025)
+  DELETE HD    9.0 GB WEBDL-1080p   | keep UHD   26.9 GB WEBDL-2160p   | Sons of the Neon Night (2025)
+  DELETE HD   19.2 GB Remux-1080p   | keep UHD   11.5 GB WEBDL-2160p   | Stand Your Ground (2025)
+  DELETE HD    7.0 GB WEBDL-1080p   | keep UHD   68.8 GB Remux-2160p   | Supergirl (2026)
+  DELETE HD   34.5 GB Remux-1080p   | keep UHD   54.0 GB Remux-2160p   | TRON: Ares (2025)
+  DELETE HD   10.4 GB WEBDL-1080p   | keep UHD   21.1 GB WEBDL-2160p   | The Accountant² (2025)
+  DELETE HD    9.6 GB WEBDL-1080p   | keep UHD   73.7 GB Remux-2160p   | The Death of Robin Hood (2026)
+  DELETE HD   25.2 GB Remux-1080p   | keep UHD   48.4 GB Remux-2160p   | The Home (2025)
+  DELETE HD    6.1 GB WEBDL-1080p   | keep UHD   71.6 GB Remux-2160p   | The Life of Chuck (2025)
+  DELETE HD   32.0 GB Remux-1080p   | keep UHD   40.2 GB BR-DISK       | The Life of David Gale (2003)
+  DELETE HD    2.9 GB WEBDL-1080p   | keep UHD   25.4 GB WEBDL-2160p   | The Mandalorian and Grogu (2026)
+  DELETE HD    2.7 GB WEBRip-1080p  | keep UHD   76.6 GB Remux-2160p   | The Secret Agent (2025)
+  DELETE HD   23.1 GB Remux-1080p   | keep UHD   32.9 GB BR-DISK       | The Uninvited (2009)
+  DELETE HD   73.1 GB BR-DISK       | keep UHD   73.1 GB BR-DISK       | This Is Spinal Tap (1984)
+  DELETE HD   19.5 GB Remux-1080p   | keep UHD   53.4 GB Remux-2160p   | Together (2025)
+  SKIP   HD   13.6 GB WEBDL-2160p   is BETTER than UHD    1.3 GB WEBDL-720p    | Deep Water (2026)  <- let UHD Radarr upgrade first (or --force)
+  SKIP   HD    7.0 GB WEBDL-2160p   is BETTER than UHD    8.5 GB WEBDL-1080p   | The Mastermind (2025)  <- let UHD Radarr upgrade first (or --force)
+  -> 37 HD copies,  574.6 GB to free; 2 skipped
+
+== HD: folders with extra video files
+  DELETE    6.9 GB Civil War 2024 1080p 10bit DS4K iTunes WEB-Rip DDP5 1 Atmos HEVC-NmCT.mkv   (Radarr keeps: Civil.War.2024.2160p.WEB-DL.DDP5.1.Atmos.SDR.H265-AOC.mkv)
+  REVIEW   23.6 GB Force.of.Nature.The.Dry.2.2024.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-MANiAC.mkv   <- Radarr tracks the disc image 00110.m2ts; import this .mkv in Radarr (Manual Import) so the disc becomes the extra, then re-run
+  -> 1 duplicate files,    6.9 GB to free; 0 box-set files left alone
+
+== UHD: folders with extra video files
+  KEEP     67.0 GB sbusLN.0001RDHSULPNOISIV-AM.DH.STD.0202TB.tib01.RDH.p0612.XAMI.4102.ralletsretnI.mkv   <- parses as a DIFFERENT movie (box set / bonus film)
+  KEEP     63.7 GB 00010.m2ts   <- parses as a DIFFERENT movie (box set / bonus film)
+  KEEP     50.5 GB sbusLN.0001RDHSULPNOISIV-somtA.DH.eurT.ybloD.0202TB.p0612.tib01.RDH.7991.tnemelE.htfiF.ehT.mkv   <- parses as a DIFFERENT movie (box set / bonus film)
+  -> 0 duplicate files,    0.0 GB to free; 3 box-set files left alone
+
+[DRY RUN] would delete 38 items. Re-run with --apply to do it.

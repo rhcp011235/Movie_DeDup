@@ -1,152 +1,88 @@
-# Movie Dupecheck
+# Movie Dupecheck v2 — Radarr-aware
 
-A Python script that finds and removes duplicate movie folders across two movie collections. It detects duplicates within each collection (multiple versions of the same movie) and finds movies that exist in both collections (HD and UHD versions).
+Finds and removes duplicate movies across an **HD Radarr** and a **UHD Radarr**, and extra video files
+sitting inside a movie's folder. Talks to Radarr; never guesses from folder names.
 
-## Features
+## Why v2
 
-- Detects duplicate movies within a single directory
-- Finds movies that exist in both HD and UHD directories
-- Compares file sizes to determine which version to keep
-- Calculates total space that will be freed
-- Dry-run mode to preview what would be deleted
-- Handles both folders and files
-- Supports various movie naming conventions
+v1 matched movies by folder name and deleted folders behind Radarr's back. Two things went wrong:
 
-## Requirements
+1. Radarr still had the movie **monitored**, so it just downloaded it again → an endless loop.
+2. Name parsing can't tell a duplicate from a **box set** (`The.Fast.and.the.Furious.Collection…` holds
+   8 different films in one folder) — v1 would have kept one and deleted seven movies.
 
-- Python 3.6 or higher
-- No external dependencies (uses standard library only)
+v2 fixes both by using Radarr as the source of truth:
+
+- Movies are matched by **TMDB id** across the two Radarrs.
+- Deletion goes **through Radarr's API** (`DELETE /movie?deleteFiles=true&addImportExclusion=true`), so the
+  file is removed *and* the movie can never be re-added or re-downloaded.
+- For extra files inside a folder, Radarr's **own parser** (`/api/v3/parse`) decides whether a file is the
+  same movie (→ duplicate, delete) or a different one (→ box set / bonus film, keep and report).
+- **Dry run by default.** Nothing is deleted without `--apply`, and `--apply` asks you to type `DELETE`
+  unless you add `--yes` (for cron).
+
+## Rules
+
+**Cross-library** — a movie that has a file in *both* Radarrs:
+
+- The **UHD library is the keeper**. The script never deletes from UHD Radarr (it has to stay so it can keep
+  upgrading toward the Dolby Vision remux you actually want).
+- The **HD copy is deleted** when UHD's file is at least as good (resolution → source → size).
+- If the HD file is *better* than UHD's (HD found a 2160p web, UHD only has a 720p), it is **skipped and
+  reported** — let UHD Radarr's upgrade search fix that first. `--force` overrides.
+
+**In-folder** — a movie folder with more than one video file (≥ `--min-size-mb`, default 700 MB):
+
+- Files that Radarr's parser maps to the **same movie** as the folder → deleted, then Radarr rescans.
+- Files that map to a **different movie** or don't parse → kept, listed as box-set files.
 
 ## Usage
 
-Basic usage with directory paths:
+Run on the host that can see the movie folders (Unraid), so the in-folder scan can stat files:
 
 ```bash
+# dry run (default) — shows exactly what would go
 python3 movie_dupecheck.py \
-    --hd-file "/path/to/HD/Movies/" \
-    --uhd-file "/path/to/UHD/Movies/" \
-    --hd-path "/path/to/HD/Movies/" \
-    --uhd-path "/path/to/UHD/Movies/"
+  --hd-url  http://192.168.2.9:7878 --hd-key  <HD api key> \
+  --uhd-url http://192.168.2.9:7979 --uhd-key <UHD api key> \
+  --path-map /data=/mnt/user/media
+
+# do it
+python3 movie_dupecheck.py ... --apply          # asks you to type DELETE
+python3 movie_dupecheck.py ... --apply --yes    # for cron
 ```
 
-Dry run mode (preview only, no deletion):
+Keys can also come from the environment: `HD_URL`, `HD_KEY`, `UHD_URL`, `UHD_KEY`.
 
-```bash
-python3 movie_dupecheck.py \
-    --hd-file "/path/to/HD/Movies/" \
-    --uhd-file "/path/to/UHD/Movies/" \
-    --dry-run
-```
+| Flag | Meaning |
+|---|---|
+| `--path-map C=H` | container path prefix → host prefix (Radarr reports `/data/...`; the host sees `/mnt/user/media/...`). Repeatable. Without it the in-folder pass is skipped. |
+| `--min-size-mb N` | ignore video files smaller than N MB (samples, trailers). Default 700. |
+| `--skip-cross` / `--skip-folders` | run only one of the two passes |
+| `--force` | delete the HD copy even when it is better than the UHD file |
+| `--apply` | actually delete (otherwise dry run) |
+| `--yes` | with `--apply`: no interactive confirmation |
 
-### Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `--hd-file` | Path to HD movie list file or directory containing HD movies |
-| `--uhd-file` | Path to UHD movie list file or directory containing UHD movies |
-| `--hd-path` | Path to HD directory for size checking (optional) |
-| `--uhd-path` | Path to UHD directory for size checking (optional) |
-| `--dry-run` | Show what would be deleted without actually deleting |
-| `--verbose` | Show detailed debug information |
-
-## How It Works
-
-### Duplicate Detection
-
-The script groups movies by extracting the title and year from folder names:
+## Example (dry run)
 
 ```
-Rampage.2018.2160p.UHD.BluRay.x265-TERMiNAL/    ->  Rampage (2018)
-Rampage.2018.2160p.UHD.BLURAY.REMUX-EXTREME/    ->  Rampage (2018)
+mode: DRY RUN   rule: UHD is the keeper; HD copy goes when UHD's file is as good or better
+
+== movies with a file in BOTH libraries: 39
+  DELETE HD    2.0 GB WEBDL-1080p   | keep UHD   77.8 GB Remux-2160p   | Backrooms (2026)
+  DELETE HD    1.8 GB Bluray-1080p  | keep UHD   61.6 GB Remux-2160p   | Dangerous Animals (2025)
+  SKIP   HD   13.6 GB WEBDL-2160p   is BETTER than UHD    1.3 GB WEBDL-720p | Deep Water (2026)  <- let UHD Radarr upgrade first (or --force)
+  -> 38 HD copies,  580.2 GB to free; 1 skipped
+
+== HD: folders with extra video files
+  DELETE    6.9 GB Civil War 2024 1080p ... HEVC-NmCT.mkv   (Radarr keeps: Civil.War.2024.2160p...AOC.mkv)
+  KEEP     4.1 GB Fast.Five.2011...mkv   <- parses as a DIFFERENT movie (box set / bonus film)
 ```
 
-Movies with different years are treated as separate entries:
+## Requirements
 
-```
-Halloween.1978.2160p.UHD.BluRay.x265-TERMiNAL/  ->  Halloween (1978)
-Halloween.2018.2160p.UHD.BluRay.x265-TERMiNAL/  ->  Halloween (2018)
-```
-
-### What Gets Deleted
-
-Within each duplicate group, the script:
-1. Compares file sizes
-2. Keeps the largest version
-3. Marks smaller versions for deletion
-
-For movies in both HD and UHD directories, it:
-1. Compares sizes across both collections
-2. Keeps the larger version (typically UHD)
-3. Marks the smaller for deletion
-
-### Output
-
-The script shows:
-- Total movie counts per collection
-- Number of duplicate groups found
-- Which folders will be kept vs deleted
-- Total space that will be freed
-- Prompts for confirmation before deletion
-
-## Example Output
-
-```
-================================================================================
- MOVIE DUPLICATE CHECK RESULTS
-================================================================================
-
-Total HD movies: 2914
-Total UHD movies: 584
-
-================================================================================
- DUPLICATES IN UHD LIST
-================================================================================
-
-Found 3 duplicate groups in UHD list:
-
-1. Rampage (3 copies)
-     KEEP >    78.54 GB | Rampage.2018.UHD.BLURAY.REMUX-EXTREME/
-     DELETE    45.21 GB | Rampage.2018.2160p.UHD.BluRay-TERMiNAL/
-     DELETE    32.18 GB | Rampage.2018.2160p.BluRay-PSA/
-
-...
-
-================================================================================
- SUMMARY
-================================================================================
-
-Movies in both HD and UHD: 2
-Duplicate groups in HD: 5
-Duplicate groups in UHD: 6
-
-============================================================
- READY TO DELETE 11 FOLDERS:
- Total space to be freed: 215.43 GB
-============================================================
-
-Type 'DELETE' to confirm deletion:
-```
-
-## Supported Naming Conventions
-
-The script handles various movie naming formats:
-
-```
-Movie.Title.2018.2160p.UHD.BluRay.x265-GROUP/
-Movie.Title.(2018).2160p.UHD.BluRay.x265-GROUP/
-Movie.Title.2018.MULTi.2160p.UHD.BluRay-GROUP/
-Movie.Title.2018.UHD.BLURAY.REMUX-HDR-GROUP/
-```
-
-The release group, quality indicators (REMUX, HDR, 10bit, etc.), and audio codecs are preserved in the display output but do not affect duplicate detection.
-
-## Limitations
-
-- Does not detect remakes with the same year (different movies released same year)
-- Folder names must contain a year for proper grouping
-- Very large collections may take time to scan for file sizes
-- SMB/network shares may be slow for size calculations
+Python 3.8+, standard library only. Radarr v3 API (Radarr 4/5/6).
 
 ## License
 
-MIT License
+MIT
